@@ -1,156 +1,689 @@
 {% extends "base.html" %}
 {% block conent %}
-<div class="ui menu borderless">
-    <label class="item">用户列表：</label>
+<div class="ui menu borderless" style="flex-wrap: wrap; display: flex;">
+    <label class="item">用户筛选：</label>
+    <!-- 机器码搜索框 -->
+    <div class="item">
+        <div class="ui action input">
+            <input id="machine-search" type="text" placeholder="搜索机器码" onkeydown="searchKeypress(event);">
+            <button class="ui button" onclick="searchMachine()">搜索</button>
+        </div>
+    </div>
+    
+    <!-- 应用分类筛选 -->
+    <label class="item">应用筛选：</label>
+    <div class="item">
+        <div class="ui selection dropdown" id="app-filter">
+            <input type="hidden" name="app">
+            <i class="dropdown icon"></i>
+            <div class="default text">选择应用分类</div>
+            <div class="menu">
+                {% for app in app_categories %}
+                <div class="item" data-value="{{ app }}">
+                    <div class="ui grid">
+                        <div class="twelve wide column">{{ app }}</div>
+                        <div class="four wide column right aligned">
+                            <i class="trash icon red" onclick="event.stopPropagation();deleteAppCategory('{{ app }}')" style="cursor: pointer;"></i>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="item" onclick="showAddAppModal()">
+                    <i class="plus icon"></i> 添加应用
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AES配置管理按钮 -->
+    <div class="item">
+        <button class="ui teal button" onclick="showAesConfigModal()">
+            <i class="key icon"></i> AES配置管理
+        </button>
+    </div>
 
-    <div class="right item">
-        <div class="ui labeled icon input">
-            <label for="search" class="ui label">搜索：</label>
-            <input id="search" type="text" placeholder="机器码..." onkeydown="keypress(event);">
-            <i class="inverted circular search link icon"></i>
+    <div style="flex-basis: 100%; height: 0;"></div>
+
+    <label class="item">用户备注：</label>
+    <!-- 备注筛选 -->
+    <div class="item">
+        <div class="ui action input">
+            <input id="remark-search" type="text" placeholder="搜索备注" oninput="filterByRemark()">
+            <button class="ui button" onclick="filterByRemark()">筛选</button>
+        </div>
+    </div>
+
+    <label class="item">用户位数：</label>
+    <!-- 位数筛选 -->
+    <div class="item">
+        <div class="ui action input">
+            <input id="length-filter" type="number" min="1" max="100" placeholder="位数" value="16">
+            <button class="ui button" onclick="filterByLength()">筛选</button>
         </div>
     </div>
 </div>
 
-<table class="ui celled striped selectable table">
+<!-- 添加应用分类的模态框 -->
+<div class="ui modal" id="add-app-modal">
+    <div class="header">添加应用分类</div>
+    <div class="content">
+        <div class="ui input fluid">
+            <input type="text" id="new-app-name" placeholder="输入应用名称">
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">取消</div>
+        <div class="ui primary button" onclick="addAppCategory()">确定</div>
+    </div>
+</div>
+
+<!-- 修改备注的模态框 -->
+<div class="ui modal" id="remark-modal">
+    <div class="header">修改备注</div>
+    <div class="content">
+        <div class="ui form">
+            <div class="field">
+                <label>机器码：</label>
+                <input type="text" id="remark-machine-code" readonly>
+            </div>
+            <div class="field">
+                <label>备注内容：</label>
+                <textarea id="remark-content" rows="3" maxlength="500"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">取消</div>
+        <div class="ui primary button" onclick="updateRemarkFromModal()">确定</div>
+    </div>
+</div>
+
+<!-- 删除应用分类确认模态框 -->
+<div class="ui small modal" id="delete-app-modal">
+    <div class="header">删除应用分类</div>
+    <div class="content">
+        <p>确定要删除应用分类 "<span id="delete-app-name"></span>" 吗？</p>
+        <p class="ui red text">注意：删除后，使用该分类的用户将自动设置为"未选择"状态。</p>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">取消</div>
+        <div class="ui red button" onclick="confirmDeleteAppCategory()">确定删除</div>
+    </div>
+</div>
+
+<!-- AES配置管理模态框 -->
+<div class="ui modal" id="aes-config-modal">
+    <div class="header">AES配置管理</div>
+    <div class="content">
+        <div class="ui divided list" id="aes-config-list">
+            <!-- AES配置列表会在这里动态加载 -->
+        </div>
+    </div>
+    <div class="actions">
+        <button class="ui primary button" onclick="generateAesConfig()">
+            <i class="plus icon"></i> 生成新配置
+        </button>
+        <div class="ui cancel button">关闭</div>
+    </div>
+</div>
+
+<table class="ui celled striped selectable table" id="user-table">
     <thead>
         <tr>
             <th>机器码</th>
             <th>到期时间</th>
             <th>注册时间</th>
+            <th>应用分类</th>
+            <th>备注</th>
+            <th>AES配置</th>
             <th class="left aligned">操作</th>
         </tr>
     </thead>
-    {%for d in user_data%}
-    <tr>
-        <td>{{d[0]}}</td>
-        <td>
-            <div class="ui input right icon">
-                <i class="calendar icon"></i>
-                <input id="{{d[0]}}" type="text" value="{{d[1]}}" onclick="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})" style="cursor: pointer;">
-            </div>
-        </td>
-        <td>{{d[2]}}</td>
-        <td>
-            <i class="copy icon"></i>
-            <a href="#" class="btn" onclick="set_user_info('{{d[0]}}');">修改</a>
-            &ensp;&ensp;&ensp;&ensp;
-            <i class="trash alternate icon"></i>
-            <a class="delete" http="/admin/user_info/delete?key={{d[0]}}" href="#">删除</a>
-        </td>
-    </tr>
-
-    {%endfor%}
+    <tbody>
+        {%for d in user_data%}
+        <tr data-machine="{{d[0]}}" data-length="{{d[0]|length}}" data-remark="{{d[4]}}">
+            <td>{{d[0]}}</td>
+            <td>
+                <div class="ui input right icon">
+                    <i class="calendar icon"></i>
+                    <input id="{{d[0]}}" type="text" value="{{d[1]}}" 
+                           onclick="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})" 
+                           onchange="set_user_info('{{d[0]}}', this.value)"
+                           style="cursor: pointer;">
+                </div>
+            </td>
+            <td>{{d[2]}}</td>
+            <!-- 应用分类选择器 -->
+            <td>
+                <div class="ui selection dropdown app-selector" data-machine="{{d[0]}}">
+                    <input type="hidden" name="app" value="{{d[3]}}">
+                    <i class="dropdown icon"></i>
+                    <div class="text">{{d[3] if d[3] else '未选择'}}</div>
+                    <div class="menu">
+                        {% for app in app_categories %}
+                        <div class="item" data-value="{{ app }}">{{ app }}</div>
+                        {% endfor %}
+                        <div class="item" onclick="showAddAppModal('{{d[0]}}')">
+                            <i class="plus icon"></i> 添加应用
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <!-- 备注按钮 -->
+            <td>
+                <button class="ui icon button remark-btn" data-machine="{{d[0]}}" data-content="{{d[4]}}" onclick="showRemarkModal('{{d[0]}}', '{{d[4]}}')">
+                    <i class="edit icon"></i>
+                </button>
+                {% if d[4] %}
+                <div class="ui popup">
+                    {{d[4]}}
+                </div>
+                {% endif %}
+            </td>
+            <!-- AES配置选择器 -->
+            <td>
+                <div class="ui selection dropdown aes-selector" data-machine="{{d[0]}}">
+                    <input type="hidden" name="aes_config" value="{{d[5]}}">
+                    <i class="dropdown icon"></i>
+                    <div class="text">
+                        {% for config in aes_configs %}
+                            {% if config.config_id == d[5] %}{{ config.name }}{% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="menu">
+                        {% for config in aes_configs %}
+                        <div class="item" data-value="{{ config.config_id }}">{{ config.name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <i class="copy icon"></i>
+                <a href="#" class="btn" data-clipboard-text="{{d[0]}}">复制</a>
+                &ensp;&ensp;&ensp;&ensp;
+                <i class="trash alternate icon"></i>
+                <a class="delete" http="/admin/user_info/delete?key={{d[0]}}&_t={{ timestamp | default(0) }}" href="#">删除</a>
+            </td>
+        </tr>
+        {%endfor%}
+    </tbody>
 </table>
 
 <div class="ui fluid buttons">
-    <button class="ui button" onclick="window.location.href = '?page={{page[0]}}'">首页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[0]}}&_t=' + Date.now()">首页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[1]}}'">上一页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[1]}}&_t=' + Date.now()">上一页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[2]}}'">下一页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[2]}}&_t=' + Date.now()">下一页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[3]}}'">尾页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[3]}}&_t=' + Date.now()">尾页</button>
 </div>
 
 <script type="text/javascript">
+    let currentRemarkMachine = '';
+    let currentDeleteAppName = '';
+    
     $(document).ready(function () {
-        //ajax删除用户(使用$(document).on('click', '.delete', function () {可以有效解决ajax刷新后的删除事件失效问题)
+        // 初始化下拉菜单
+        $('.ui.dropdown').dropdown();
+        $('#app-filter').dropdown();
+        
+        // 初始化备注按钮的弹出框
+        $('.remark-btn').popup({
+            on: 'hover'
+        });
+
+        // 保存原始值用于错误恢复
+        $('input[type="text"]').each(function() {
+            $(this).data('original-value', $(this).val());
+        });
+
+        //ajax删除用户
         $(document).on('click', '.delete', function () {
-            // $('.delete').click(function () {
             var url = $(this).attr('http');
-            console.log(url);
             $.ajax({
                 url: url,
                 type: 'GET',
-                success: function (data) {
-                    if (data['code'] == 10000) {
-                        alert('用户删除成功');
-                        window.location.reload();
-                    } else {
-                        alert('用户删除成功');
-                    }
-                }
-            });
-        });
-
-        //ajax搜索
-        $('.inverted.circular.search.link.icon').click(function () {
-            //取search的值
-            const search = $('#search').val();
-            if (search == '') {
-                alert('请输入需搜索的机器码');
-                //获取焦点
-                $('#search').focus();
-                return;
-            }
-            $.ajax({
-                url: '/admin/user_info/search',
-                type: 'GET',
-                data: {
-                    'key': search
+                headers: {
+                    'Cache-Control': 'no-cache'
                 },
                 success: function (data) {
-                    console.log(data);
                     if (data['code'] == 10000) {
-                        var user_data = data['data'];
-                        var html = '';
-                        html += '<thead><tr><th>机器码</th><th>到期时间</th><th>注册时间</th><th class="left aligned">操作</th></tr></thead>';
-                        html += '<tr>';
-                        html += '<td>' + user_data[0] + '</td>';
-                        html += '<td>';
-                        html += '<div class="ui input right icon">';
-                        html += '<i class="calendar icon"></i>';
-                        html += '<input id="' + user_data[0] + '" type="text" value="' + user_data[1] + '" onclick="WdatePicker({dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" style="cursor: pointer;">';
-                        html += '</div>';
-                        html += '</td>';
-                        html += '<td>' + user_data[2] + '</td>';
-                        html += '<td>';
-                        html += '<i class="copy icon"></i>';
-                        html += '<a href="#" class="btn" onclick="set_user_info(\'' + user_data[0] + '\');">修改</a>';
-                        html += '&ensp;&ensp;&ensp;&ensp;';
-                        html += '<i class="trash alternate icon"></i>';
-                        html += '<a class="delete" http="/admin/user_info/delete?key=' + user_data[0] + '" href="#">删除</a>';
-                        html += '</td>';
-                        html += '</tr>';
-                        $('.table').html(html);
+                        handleAjaxSuccess('用户删除成功');
                     } else {
-                        alert('该用户不存在！');
+                        alert('用户删除失败: ' + data.msg);
                     }
-
-                }
+                },
+                error: handleAjaxError
             });
         });
     });
-    function set_user_info(id) {
-        // alert(id);
-        //取该id输入框的值
-        var datatime = document.getElementById(id).value;
-        // alert(datatime)
-        //ajax修改用户到期时间
+    
+    function set_user_info(id, value) {
         $.ajax({
             url: '/admin/user_info/update',
             type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
             data: JSON.stringify({
                 'machine_code': id,
-                'expire_date': datatime
+                'expire_date': value
             }),
             success: function (data) {
                 if (data['code'] == 10000) {
-                    alert('修改成功');
-                    window.location.reload();
+                    handleAjaxSuccess('修改成功');
                 } else {
-                    alert('修改失败');
+                    alert('修改失败: ' + data.msg);
+                    // 恢复原始值
+                    $('#' + id).val($('#' + id).data('original-value'));
                 }
+            },
+            error: function(xhr, status, error) {
+                handleAjaxError(xhr, status, error);
+                // 恢复原始值
+                $('#' + id).val($('#' + id).data('original-value'));
             }
         });
     };
-    function keypress(e) {
+    
+    // 显示添加应用模态框
+    function showAddAppModal(machineCode = null) {
+        $('#add-app-modal').data('machine', machineCode);
+        $('#new-app-name').val('');
+        $('#add-app-modal').modal('show');
+    }
+    
+    // 添加应用分类
+    function addAppCategory() {
+        const newApp = $('#new-app-name').val().trim();
+        if (!newApp) {
+            alert('请输入应用名称');
+            return;
+        }
+        
+        const machineCode = $('#add-app-modal').data('machine');
+        
+        $.ajax({
+            url: '/admin/app_category/add',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({name: newApp}),
+            success: function(response) {
+                if (response.code === 10000 || response.code === 10040) {
+                    // 添加成功或应用分类已存在，如果是在机器码下拉菜单中触发的，则设置该机器码的应用分类
+                    if (machineCode) {
+                        $.ajax({
+                            url: '/admin/user_info/update_app',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {
+                                'Cache-Control': 'no-cache'
+                            },
+                            data: JSON.stringify({
+                                machine_code: machineCode,
+                                app_name: newApp
+                            }),
+                            success: function(response) {
+                                if (response.code === 10000) {
+                                    handleAjaxSuccess('应用分类更新成功');
+                                } else {
+                                    alert(response.msg);
+                                }
+                            },
+                            error: handleAjaxError
+                        });
+                    } else {
+                        handleAjaxSuccess('应用分类添加成功');
+                    }
+                } else {
+                    alert(response.msg);
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 显示删除应用分类确认模态框
+    function deleteAppCategory(appName) {
+        currentDeleteAppName = appName;
+        $('#delete-app-name').text(appName);
+        $('#delete-app-modal').modal('show');
+    }
+    
+    // 确认删除应用分类
+    function confirmDeleteAppCategory() {
+        $.ajax({
+            url: '/admin/app_category/delete',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({name: currentDeleteAppName}),
+            success: function(response) {
+                if (response.code === 10000) {
+                    handleAjaxSuccess('应用分类删除成功');
+                } else {
+                    alert(response.msg);
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 更新用户应用分类
+    $(document).on('change', '.app-selector', function() {
+        const machineCode = $(this).data('machine');
+        const appName = $(this).dropdown('get value');
+        
+        $.ajax({
+            url: '/admin/user_info/update_app',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({
+                machine_code: machineCode,
+                app_name: appName
+            }),
+            success: function(response) {
+                if (response.code !== 10000) {
+                    alert(response.msg);
+                }
+                // 注意：这里不强制刷新，因为只是单个字段更新
+            },
+            error: handleAjaxError
+        });
+    });
+    
+    // 更新用户AES配置
+    $(document).on('change', '.aes-selector', function() {
+        const machineCode = $(this).data('machine');
+        const aesConfigId = $(this).dropdown('get value');
+        
+        $.ajax({
+            url: '/admin/user_info/update_aes',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({
+                machine_code: machineCode,
+                aes_config_id: aesConfigId
+            }),
+            success: function(response) {
+                if (response.code !== 10000) {
+                    alert(response.msg);
+                }
+                // 注意：这里不强制刷新，因为只是单个字段更新
+            },
+            error: handleAjaxError
+        });
+    });
+    
+    // 显示备注模态框
+    function showRemarkModal(machineCode, currentRemark) {
+        currentRemarkMachine = machineCode;
+        $('#remark-machine-code').val(machineCode);
+        $('#remark-content').val(currentRemark);
+        $('#remark-modal').modal('show');
+    }
+    
+    // 从模态框更新备注
+    function updateRemarkFromModal() {
+        const remark = $('#remark-content').val().trim();
+        $.ajax({
+            url: '/admin/user_info/update_remark',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({
+                machine_code: currentRemarkMachine,
+                remark: remark
+            }),
+            success: function(response) {
+                if (response.code === 10000) {
+                    handleAjaxSuccess('备注更新成功');
+                } else {
+                    alert(response.msg);
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 显示AES配置管理模态框
+    function showAesConfigModal() {
+        loadAesConfigs();
+        $('#aes-config-modal').modal('show');
+    }
+    
+    // 加载AES配置列表
+    function loadAesConfigs() {
+        $.ajax({
+            url: '/admin/aes_configs',
+            type: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            success: function(response) {
+                let html = '';
+                response.forEach(config => {
+                    html += '<div class="item">';
+                    html += '<div class="content">';
+                    html += '<div class="header">' + config.name + '</div>';
+                    html += '<div class="description">创建时间: ' + config.created_time + '</div>';
+                    html += '</div>';
+                    if (!config.is_default) {
+                        html += '<div class="right floated content">';
+                        html += '<button class="ui red mini button" onclick="deleteAesConfig(\'' + config.config_id + '\')">删除</button>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                });
+                $('#aes-config-list').html(html);
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 生成新的AES配置
+    function generateAesConfig() {
+        $.ajax({
+            url: '/admin/aes_configs/generate',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({}),
+            success: function(response) {
+                if (response.code === 10000) {
+                    alert('AES配置生成成功');
+                    loadAesConfigs();
+                } else {
+                    alert(response.msg);
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 删除AES配置
+    function deleteAesConfig(configId) {
+        if (!confirm('确定要删除这个AES配置吗？')) return;
+        
+        $.ajax({
+            url: '/admin/aes_configs/delete',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: JSON.stringify({config_id: configId}),
+            success: function(response) {
+                if (response.code === 10000) {
+                    alert('AES配置删除成功');
+                    loadAesConfigs();
+                } else {
+                    alert(response.msg);
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 后端搜索机器码
+    function searchMachine() {
+        const searchTerm = $('#machine-search').val().trim();
+        if (searchTerm === '') {
+            alert('请输入需搜索的机器码');
+            $('#machine-search').focus();
+            return;
+        }
+        
+        $.ajax({
+            url: '/admin/user_info/search',
+            type: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache'
+            },
+            data: {
+                'key': searchTerm
+            },
+            success: function (data) {
+                if (data['code'] == 10000) {
+                    var user_data = data['data'];
+                    var html = '';
+                    html += '<tr data-machine="' + user_data[0] + '" data-length="' + user_data[0].length + '" data-remark="' + user_data[4] + '">';
+                    html += '<td>' + user_data[0] + '</td>';
+                    html += '<td>';
+                    html += '<div class="ui input right icon">';
+                    html += '<i class="calendar icon"></i>';
+                    html += '<input id="' + user_data[0] + '" type="text" value="' + user_data[1] + '" onclick="WdatePicker({dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" onchange="set_user_info(\'' + user_data[0] + '\', this.value)" style="cursor: pointer;">';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '<td>' + user_data[2] + '</td>';
+                    html += '<td>';
+                    html += '<div class="ui selection dropdown app-selector" data-machine="' + user_data[0] + '">';
+                    html += '<input type="hidden" name="app" value="' + user_data[3] + '">';
+                    html += '<i class="dropdown icon"></i>';
+                    html += '<div class="text">' + (user_data[3] ? user_data[3] : '未选择') + '</div>';
+                    html += '<div class="menu">';
+                    {% for app in app_categories %}
+                    html += '<div class="item" data-value="{{ app }}">{{ app }}</div>';
+                    {% endfor %}
+                    html += '<div class="item" onclick="showAddAppModal(\'' + user_data[0] + '\')"><i class="plus icon"></i> 添加应用</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '<td>';
+                    html += '<button class="ui icon button remark-btn" data-machine="' + user_data[0] + '" data-content="' + user_data[4] + '" onclick="showRemarkModal(\'' + user_data[0] + '\', \'' + user_data[4] + '\')">';
+                    html += '<i class="edit icon"></i>';
+                    html += '</button>';
+                    if (user_data[4]) {
+                        html += '<div class="ui popup">' + user_data[4] + '</div>';
+                    }
+                    html += '</td>';
+                    html += '<td>';
+                    html += '<div class="ui selection dropdown aes-selector" data-machine="' + user_data[0] + '">';
+                    html += '<input type="hidden" name="aes_config" value="' + user_data[5] + '">';
+                    html += '<i class="dropdown icon"></i>';
+                    html += '<div class="text">';
+                    {% for config in aes_configs %}
+                    html += '<span style="display:none" data-config-id="{{ config.config_id }}">{{ config.name }}</span>';
+                    {% endfor %}
+                    html += '</div>';
+                    html += '<div class="menu">';
+                    {% for config in aes_configs %}
+                    html += '<div class="item" data-value="{{ config.config_id }}">{{ config.name }}</div>';
+                    {% endfor %}
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '<td>';
+                    html += '<i class="copy icon"></i>';
+                    html += '<a href="#" class="btn" data-clipboard-text="' + user_data[0] + '">复制</a>';
+                    html += '&ensp;&ensp;&ensp;&ensp;';
+                    html += '<i class="trash alternate icon"></i>';
+                    html += '<a class="delete" http="/admin/user_info/delete?key=' + user_data[0] + '&_t=' + Date.now() + '" href="#">删除</a>';
+                    html += '</td>';
+                    html += '</tr>';
+                    $('#user-table tbody').html(html);
+                    // 重新初始化下拉菜单和弹出框
+                    $('.ui.dropdown').dropdown();
+                    $('.remark-btn').popup({ on: 'hover' });
+                } else {
+                    alert('该用户不存在！');
+                    $('#user-table tbody').html('<tr><td colspan="7" class="center aligned">没有找到相关用户</td></tr>');
+                }
+            },
+            error: handleAjaxError
+        });
+    }
+    
+    // 搜索框回车事件
+    function searchKeypress(e) {
         var evt = window.event || e;
         if (evt.keyCode == 13) {
-            //点击搜索
-            $('.inverted.circular.search.link.icon').click();
+            searchMachine();
         }
-    };
+    }
+    
+    // 前端筛选功能
+    function filterByMachine() {
+        const searchTerm = $('#machine-search').val().toLowerCase();
+        $('#user-table tbody tr').each(function() {
+            const machineCode = $(this).data('machine').toLowerCase();
+            $(this).toggle(machineCode.includes(searchTerm));
+        });
+    }
+    
+    // 按机器码长度筛选
+    function filterByLength() {
+        const length = parseInt($('#length-filter').val()) || 0;
+        if (length <= 0) {
+            $('#user-table tbody tr').show();
+            return;
+        }
+        
+        $('#user-table tbody tr').each(function() {
+            const rowLength = $(this).data('length');
+            $(this).toggle(rowLength === length);
+        });
+    }
+    
+    // 按备注筛选
+    function filterByRemark() {
+        const searchTerm = $('#remark-search').val().toLowerCase();
+        $('#user-table tbody tr').each(function() {
+            const remark = $(this).data('remark').toLowerCase() || '';
+            $(this).toggle(remark.includes(searchTerm));
+        });
+    }
+    
+    // 按应用分类筛选
+    $('#app-filter').dropdown({
+        onChange: function(value) {
+            if (!value) {
+                $('#user-table tbody tr').show();
+                return;
+            }
+            
+            $('#user-table tbody tr').each(function() {
+                const app = $(this).find('.app-selector').dropdown('get value') || '';
+                $(this).toggle(app === value);
+            });
+        }
+    });
 </script>
 {% endblock %}
