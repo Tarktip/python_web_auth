@@ -6,12 +6,15 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="/static/jquery-3.6.1.min.js"></script>
-    <script src="/static/Semantic-UI-CSS/semantic.min.js"></script>
-    <script src="/static/clipboard.min.js"></script>
-    <script src="/static/My97DatePicker/WdatePicker.js"></script>
-    <link rel="stylesheet" href="/static/Semantic-UI-CSS/semantic.min.css">
-    <link rel="shortcut icon" href="/static/images/vip.png" type="image/x-icon"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script src="/static/jquery-3.6.1.min.js?t={{ timestamp | default(0) }}"></script>
+    <script src="/static/Semantic-UI-CSS/semantic.min.js?t={{ timestamp | default(0) }}"></script>
+    <script src="/static/clipboard.min.js?t={{ timestamp | default(0) }}"></script>
+    <script src="/static/My97DatePicker/WdatePicker.js?t={{ timestamp | default(0) }}"></script>
+    <link rel="stylesheet" href="/static/Semantic-UI-CSS/semantic.min.css?t={{ timestamp | default(0) }}">
+    <link rel="shortcut icon" href="/static/images/vip.png?t={{ timestamp | default(0) }}" type="image/x-icon"/>
     <title>{{ title }}</title>
 </head>
 
@@ -28,9 +31,9 @@
         </div>
 
         <div class="three ui buttons">
-            <button class="ui blue button" onclick="window.location.href = '/admin/user_info?page=1'">用户管理</button>
+            <button class="ui blue button" onclick="window.location.href = '/admin/user_info?page=1&_t=' + Date.now()">用户管理</button>
             <div class="or"></div>
-            <button class="ui positive button" onclick="window.location.href = '/admin/card_info?page=1'">充值卡管理</button>
+            <button class="ui positive button" onclick="window.location.href = '/admin/card_info?page=1&_t=' + Date.now()">充值卡管理</button>
             <div class="or"></div>
             <button class="ui red button" onclick="window.location.href = '/admin/logout'">退出</button>
         </div>
@@ -40,6 +43,7 @@
 
         <h4 class="ui horizontal header divider">
             <a href="https://github.com/jiayouzl/python_web_auth" target="_blank">❤ 由 ZhangLei 设计和编码 ❤</a>
+            <a href="https://github.com/Tarktip" target="_blank">❤ 由 Tarktip 完善和魔改 ❤</a>
         </h4>
 
     </div>
@@ -48,6 +52,7 @@
 </html>
 <script type="text/javascript">
     $(document).ready(function () {
+        // 初始化各种组件
         new ClipboardJS('.btn');
         $('.ui.dropdown').dropdown();
         $('.message .close')
@@ -56,5 +61,151 @@
                     .closest('.message')
                     .transition('fade');
             });
+        
+        // 强制禁用浏览器缓存
+        if (window.performance && window.performance.navigation.type === 2) {
+            // 如果是浏览器后退按钮
+            location.reload(true);
+        }
+        
+        // 禁用表单的浏览器自动填充
+        $('form').attr('autocomplete', 'off');
+        $('input').attr('autocomplete', 'off');
+        
+        // 复制功能初始化
+        var clipboard = new ClipboardJS('.btn');
+        clipboard.on('success', function (e) {
+            alert('复制成功!');
+            e.clearSelection();
+        });
+        clipboard.on('error', function (e) {
+            alert('复制失败!');
+        });
+        
+        // 开发环境下添加清除缓存按钮
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'admin.tarktip.com') {
+            addClearCacheButton();
+        }
     });
+    
+    // 强制的页面刷新函数
+    function forceReloadPage() {
+        // 方法1: 使用时间戳重新加载
+        var url = new URL(window.location.href);
+        url.searchParams.set('_t', Date.now());
+        window.location.href = url.toString();
+    }
+    
+    // 方法2: 强制从服务器重新加载
+    function forceReloadFromServer() {
+        // 清除可能的缓存
+        if (window.performance && window.performance.navigation && window.performance.navigation.type === 1) {
+            // 页面是通过刷新访问的
+            window.location.reload(true);
+        } else {
+            // 添加时间戳参数
+            var currentUrl = window.location.href;
+            var separator = currentUrl.indexOf('?') !== -1 ? '&' : '?';
+            window.location.href = currentUrl + separator + 'force_reload=' + Date.now();
+        }
+    }
+    
+    // 方法3: 使用fetch API强制获取最新数据
+    async function forceFetchData() {
+        try {
+            // 添加no-cache头
+            const response = await fetch(window.location.href, {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
+                cache: 'no-store'
+            });
+            
+            if (response.ok) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('强制刷新失败:', error);
+            window.location.reload(true);
+        }
+    }
+    
+    // 在所有AJAX成功的回调中使用强制刷新
+    function handleAjaxSuccess(message) {
+        alert(message);
+        // 延迟一下确保服务器处理完成
+        setTimeout(() => {
+            forceReloadFromServer();
+        }, 500);
+    }
+    
+    // 清除所有可能的缓存
+    function clearAllCache() {
+        // 清除localStorage和sessionStorage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // 清除IndexedDB
+        if ('indexedDB' in window) {
+            indexedDB.databases().then((databases) => {
+                databases.forEach((db) => {
+                    indexedDB.deleteDatabase(db.name);
+                });
+            });
+        }
+        
+        // 清除service worker缓存
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+            
+            // 清除缓存存储
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        
+        console.log('缓存清除完成');
+        return true;
+    }
+    
+    // 添加清除缓存按钮
+    function addClearCacheButton() {
+        if (document.getElementById('clear-cache-btn') === null) {
+            var clearBtn = document.createElement('button');
+            clearBtn.id = 'clear-cache-btn';
+            clearBtn.textContent = '清除缓存';
+            clearBtn.style.position = 'fixed';
+            clearBtn.style.top = '10px';
+            clearBtn.style.right = '10px';
+            clearBtn.style.zIndex = '9999';
+            clearBtn.style.background = 'red';
+            clearBtn.style.color = 'white';
+            clearBtn.style.border = 'none';
+            clearBtn.style.padding = '5px 10px';
+            clearBtn.style.cursor = 'pointer';
+            clearBtn.style.borderRadius = '3px';
+            clearBtn.style.fontSize = '12px';
+            clearBtn.onclick = function() {
+                if (clearAllCache()) {
+                    alert('缓存已清除，正在重新加载页面...');
+                    window.location.reload(true);
+                }
+            };
+            document.body.appendChild(clearBtn);
+        }
+    }
+    
+    // AJAX请求的通用错误处理
+    function handleAjaxError(xhr, status, error) {
+        console.error('AJAX请求失败:', error);
+        alert('请求失败: ' + (xhr.responseJSON ? xhr.responseJSON.msg : error));
+    }
 </script>
