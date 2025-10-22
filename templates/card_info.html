@@ -29,32 +29,32 @@
     <div class="right item">
         <div class="ui labeled icon input">
             <label class="ui label">制作：</label>
-            <div class="ui compact selection dropdown">
+            <div class="ui compact selection dropdown" id="number-dropdown">
                 <i class="dropdown icon"></i>
                 <div class="text">选择</div>
                 <div class="menu">
-                    <div class="item">5</div>
-                    <div class="item">10</div>
-                    <div class="item">20</div>
-                    <div class="item">50</div>
+                    <div class="item" data-value="5">5</div>
+                    <div class="item" data-value="10">10</div>
+                    <div class="item" data-value="20">20</div>
+                    <div class="item" data-value="50">50</div>
                 </div>
             </div>
             <label class="ui label">张</label>
-            <div class="ui compact selection dropdown">
+            <div class="ui compact selection dropdown" id="days-dropdown">
                 <i class="dropdown icon"></i>
                 <div class="text">选择</div>
                 <div class="menu">
-                    <div class="item">1</div>
-                    <div class="item">7</div>
-                    <div class="item">30</div>
-                    <div class="item">90</div>
-                    <div class="item">180</div>
-                    <div class="item">365</div>
+                    <div class="item" data-value="1">1</div>
+                    <div class="item" data-value="7">7</div>
+                    <div class="item" data-value="30">30</div>
+                    <div class="item" data-value="90">90</div>
+                    <div class="item" data-value="180">180</div>
+                    <div class="item" data-value="365">365</div>
                 </div>
             </div>
             <label for="search" class="ui label">天</label>
             &ensp;
-            <button class="ui black button">生成</button>
+            <button class="ui black button" id="generate-btn">生成</button>
         </div>
     </div>
 
@@ -62,13 +62,13 @@
         <div class="ui labeled icon input">
             <label for="search" class="ui label">搜索：</label>
             <input id="search" type="text" placeholder="充值卡号..." onkeydown="keypress(event);">
-            <i class="inverted circular search link icon"></i>
+            <i class="inverted circular search link icon" id="search-btn"></i>
         </div>
     </div>
 </div>
 
 
-<table class="ui celled striped selectable table">
+<table class="ui celled striped selectable table" id="card-table">
     <thead>
         <tr>
             <th>卡号</th>
@@ -80,118 +80,144 @@
             <th class="left aligned">操作</th>
         </tr>
     </thead>
-    {%for d in card_data%}
-    <tr>
-        <td>{{d[0]}}</td>
-        <td>{{d[1]}}</td>
-        <td>{{d[2]}}</td>
-        {% if d[3]=='True' %}
-        <td>已用</td>
-        {% else %}
-        <td>未用</td>
-        {% endif %}
-        <td>{{d[4]}}</td>
-        <td>{{d[5]}}</td>
-        <td>
-            <i class="copy icon"></i>
-            <a href="#" class="btn" data-clipboard-text="卡号：{{d[0]}} 密码：{{d[1]}}">复制</a>
-            &ensp;&ensp;&ensp;&ensp;
-            <i class="trash alternate icon"></i>
-            <a class="delete" http="/admin/card_info/delete?key={{d[0]}}" href="#">删除</a>
-        </td>
-    </tr>
-    {%endfor%}
+    <tbody>
+        {%for d in card_data%}
+        <tr>
+            <td>{{d[0]}}</td>
+            <td>{{d[1]}}</td>
+            <td>{{d[2]}}</td>
+            {% if d[3]=='True' %}
+            <td>已用</td>
+            {% else %}
+            <td>未用</td>
+            {% endif %}
+            <td>{{d[4]}}</td>
+            <td>{{d[5]}}</td>
+            <td>
+                <i class="copy icon"></i>
+                <a href="#" class="btn" data-clipboard-text="卡号：{{d[0]}} 密码：{{d[1]}}">复制</a>
+                &ensp;&ensp;&ensp;&ensp;
+                <i class="trash alternate icon"></i>
+                <a class="delete" http="/admin/card_info/delete?key={{d[0]}}&_t={{ timestamp | default(0) }}" href="#">删除</a>
+            </td>
+        </tr>
+        {%endfor%}
+    </tbody>
 </table>
 
 <div class="ui fluid buttons">
-    <button class="ui button" onclick="window.location.href = '?page={{page[0]}}'">首页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[0]}}&_t=' + Date.now()">首页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[1]}}'">上一页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[1]}}&_t=' + Date.now()">上一页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[2]}}'">下一页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[2]}}&_t=' + Date.now()">下一页</button>
     <div class="or"></div>
-    <button class="ui button" onclick="window.location.href = '?page={{page[3]}}'">尾页</button>
+    <button class="ui button" onclick="window.location.href = '?page={{page[3]}}&_t=' + Date.now()">尾页</button>
 </div>
 <script type="text/javascript">
     $(document).ready(function () {
-        //点击复制并关闭按钮
-        // $('.ui.positive.right.labeled.icon.button').click(function () {
-        //     alert('复制成功！');
-        // });
+        // 初始化下拉菜单
+        $('#number-dropdown').dropdown();
+        $('#days-dropdown').dropdown();
+        
         //点击导出按钮
         $('.ui.black.button').eq(0).click(function () {
-            //semantic-ui显示弹出层
             $('.ui.modal').modal('show');
         });
+        
         //点击生成按钮
-        $('.ui.black.button').eq(1).on('click', function () {
-            var num = $('.ui.compact.selection.dropdown').eq(0).find('.text').text();
-            var day = $('.ui.compact.selection.dropdown').eq(1).find('.text').text();
-            // console.log(num, day);
-            if (num == '选择' || day == '选择') {
+        $('#generate-btn').on('click', function () {
+            var num = $('#number-dropdown').dropdown('get value');
+            var day = $('#days-dropdown').dropdown('get value');
+            
+            if (!num || !day) {
                 alert('请选择制作数量和授权天数');
                 return;
             }
-            // console.log(JSON.stringify({ 'number': parseInt(num), 'days': parseInt(day) }));
+            
+            // 禁用按钮防止重复点击
+            var $btn = $(this);
+            $btn.addClass('loading disabled');
+            
             $.ajax({
                 url: '/admin/card_info/make',
                 type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                },
                 data: JSON.stringify({
-                    'number': num,
-                    'days': day
+                    'number': parseInt(num),
+                    'days': parseInt(day)
                 }),
                 success: function (data) {
+                    $btn.removeClass('loading disabled');
                     if (data['code'] == 10000) {
-                        alert('充值卡生成成功');
-                        window.location.reload();
+                        handleAjaxSuccess('充值卡生成成功');
                     } else {
-                        alert('充值卡生成失败');
+                        alert('充值卡生成失败: ' + data.msg);
                     }
+                },
+                error: function(xhr, status, error) {
+                    $btn.removeClass('loading disabled');
+                    handleAjaxError(xhr, status, error);
                 }
             });
         });
-        //ajax删除(使用$(document).on('click', '.delete', function () {可以有效解决ajax刷新后的删除事件失效问题)
-        $(document).on('click', '.delete', function () {
-            // $('.delete').click(function () {
+        
+        //ajax删除
+        $(document).on('click', '.delete', function (e) {
+            e.preventDefault();
             var url = $(this).attr('http');
-            console.log(url);
-            // var url = $(this).next().attr('http');
+            var $row = $(this).closest('tr');
+            
+            if (!confirm('确定要删除这张充值卡吗？')) {
+                return;
+            }
+            
             $.ajax({
                 url: url,
                 type: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                },
                 success: function (data) {
                     if (data['code'] == 10000) {
+                        // 直接从DOM中移除行，而不是刷新整个页面
+                        $row.fadeOut(300, function() {
+                            $(this).remove();
+                        });
                         alert('充值卡删除成功');
-                        window.location.reload();
                     } else {
-                        alert('充值卡删除成功');
+                        alert('充值卡删除失败: ' + data.msg);
                     }
-                }
+                },
+                error: handleAjaxError
             });
         });
 
         //ajax搜索
-        $('.inverted.circular.search.link.icon').click(function () {
-            //取search的值
+        $('#search-btn').click(function () {
             var search = $('#search').val();
             if (search == '') {
                 alert('请输入需搜索的充值卡号');
-                //获取焦点
                 $('#search').focus();
                 return;
             }
+            
             $.ajax({
                 url: '/admin/card_info/search',
                 type: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                },
                 data: {
                     'key': search
                 },
                 success: function (data) {
-                    console.log(data);
                     if (data['code'] == 10000) {
                         var card_data = data['data'];
                         var html = '';
-                        html += '<thead><tr><th>卡号</th><th>密码</th><th>授权天数</th><th>是否充值</th><th>充值机器码</th><th>充值时间</th><th class="left aligned">操作</th></tr></thead>';
                         html += '<tr>';
                         html += '<td>' + card_data[0] + '</td>';
                         html += '<td>' + card_data[1] + '</td>';
@@ -208,22 +234,24 @@
                         html += '<a href="#" class="btn" data-clipboard-text="卡号：' + card_data[0] + ' 密码：' + card_data[1] + '">复制</a>';
                         html += '&ensp;&ensp;&ensp;&ensp;';
                         html += '<i class="trash alternate icon"></i>';
-                        html += '<a class="delete" http="/admin/card_info/delete?key=' + card_data[0] + '" href="#">删除</a>';
+                        html += '<a class="delete" http="/admin/card_info/delete?key=' + card_data[0] + '&_t=' + Date.now() + '" href="#">删除</a>';
                         html += '</td>';
                         html += '</tr>';
-                        $('.table').html(html);
+                        $('#card-table tbody').html(html);
                     } else {
                         alert('该充值卡不存在！');
+                        $('#card-table tbody').html('<tr><td colspan="7" class="center aligned">没有找到相关充值卡</td></tr>');
                     }
-                }
+                },
+                error: handleAjaxError
             });
         });
     });
+    
     function keypress(e) {
         var evt = window.event || e;
         if (evt.keyCode == 13) {
-            //点击搜索
-            $('.inverted.circular.search.link.icon').click();
+            $('#search-btn').click();
         }
     }
 </script>
