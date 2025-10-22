@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script src="/static/jquery-3.6.1.min.js"></script>
     <script src="/static/Semantic-UI-CSS/semantic.min.js"></script>
     <link rel="stylesheet" href="/static/Semantic-UI-CSS/semantic.min.css">
@@ -19,30 +22,26 @@
                     登录到后台管理
                 </div>
             </h2>
-            <form action="login" method="get" class="ui large form">
+            <form action="/admin/login" method="post" class="ui large form" id="login-form">
                 <div class="ui stacked segment">
                     <div class="field">
                         <div class="ui left icon input">
                             <i class="user icon"></i>
-                            <input type="text" name="user" placeholder="User">
+                            <input type="text" name="user" placeholder="User" required>
                         </div>
                     </div>
                     <div class="field">
                         <div class="ui left icon input">
                             <i class="lock icon"></i>
-                            <input type="password" name="pass" placeholder="Password">
+                            <input type="password" name="pass" placeholder="Password" required>
                         </div>
                     </div>
-                    <div class="ui fluid large teal submit button">登录</div>
+                    <button type="submit" class="ui fluid large teal submit button">登录</button>
                 </div>
 
                 <div class="ui error message"></div>
 
             </form>
-
-            <!-- <div class="ui message">
-                New to us? <a href="#">Sign Up</a>
-            </div> -->
         </div>
     </div>
 </body>
@@ -78,29 +77,37 @@
                                 {
                                     type: 'empty',
                                     prompt: '请输入管理员账号'
-                                },
-                                {
-                                    type: 'length[5]',
-                                    prompt: '管理员账号必须至少10个字符'
                                 }
                             ]
                         },
                         password: {
-                            identifier: 'password',
+                            identifier: 'pass',
                             rules: [
                                 {
                                     type: 'empty',
                                     prompt: '请输入管理员密码'
-                                },
-                                {
-                                    type: 'length[5]',
-                                    prompt: '管理员密码必须至少10个字符'
                                 }
                             ]
                         }
+                    },
+                    onSuccess: function() {
+                        // 禁用提交按钮防止重复提交
+                        $('.submit.button').addClass('loading disabled');
+                        return true;
                     }
-                })
-                ;
-        })
-        ;
+                });
+                
+            // 防止表单重复提交
+            $('#login-form').on('submit', function() {
+                var $form = $(this);
+                if ($form.data('submitted') === true) {
+                    // 如果已经提交过，阻止再次提交
+                    return false;
+                } else {
+                    // 标记为已提交
+                    $form.data('submitted', true);
+                    return true;
+                }
+            });
+        });
 </script>
