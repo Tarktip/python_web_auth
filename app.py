@@ -119,7 +119,7 @@ async def reg(request: Request):
 async def login(request: Request):
     parametes = request.json
     # Api接口签名认证
-    key = 'rrm652gz4atq7jqc'
+    key = '更改一下自己用的，或参考源代码'
     timestamp = request.headers.get('timestamp')
     sign = request.headers.get('sign')
     if not timestamp or not sign:
@@ -136,8 +136,8 @@ async def login(request: Request):
         iv = user_aes_config['iv']
     else:
         # 使用默认加密
-        key = 'vqwn3p22uics8xv8'  # 16位
-        iv = 's0Q~ioZ(AYJxyvLQ'  # 16位
+        key = '更改一下自己用的，或参考源代码'  # 16位
+        iv = '更改一下自己用的，或参考源代码'  # 16位
     
     result = verify.login(parametes['machineCode'])
     
