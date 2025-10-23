@@ -20,5 +20,6 @@
 5. 增加自选aes模块加密解析，生成后在服务器后端db.json获取key以及iv进行修改解析。
 6. 增加机器码位数检索。
 
-ps：记得修改app.py api接口签名认证key，以及aes_model.py中的混淆data，文件都是原版默认的，修改后再使用
+ps：记得修改app.py api接口签名认证key，verification_model中的key以及vi，以及aes_model.py中的混淆data，文件都是原版默认的，修改后再使用
+文件内检索 “更改一下自己用的，或参考源代码” 即可
 
