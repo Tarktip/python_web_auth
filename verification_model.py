@@ -39,8 +39,8 @@ class verification(object):
             aes_configs.insert({
                 'config_id': 'default',
                 'name': '默认加密',
-                'key': 'vqwn3p22uics8xv8',
-                'iv': 's0Q~ioZ(AYJxyvLQ',
+                'key': '更改一下自己用的，或参考源代码',
+                'iv': '更改一下自己用的，或参考源代码',
                 'created_time': datetime.now(self.tz).strftime('%Y-%m-%d %H:%M:%S'),
                 'is_default': True
             })
