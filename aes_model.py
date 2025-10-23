@@ -206,11 +206,11 @@ class AEScryptor(object):
 
 
 if __name__ == '__main__':
-    key = 'vqwn3p22uics8xv8'  # 16位
-    iv = 's0Q~ioZ(AYJxyvLQ'  # 16位
+    key = '更改一下自己用的，或参考源代码'  # 16位
+    iv = '更改一下自己用的，或参考源代码'  # 16位
     aes = AEScryptor(key=key, iv=iv, paddingMode='ZeroPadding', characterSet='utf-8')
 
-    data = '好好学习111!@#$%^&*()_+'
+    data = '更改一下自己用的，或参考源代码'
     rData = aes.encryptFromString(data)
     print('密文：', rData.toBase64())
     rData = aes.decryptFromBase64(rData.toBase64())
